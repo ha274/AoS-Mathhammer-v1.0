@@ -1,0 +1,82 @@
+// Training Grounds — target profiles covering the AoS defensive spectrum
+// These are "punch dummies" — no weapons, just defensive stats to benchmark against
+export const TARGETS = [
+  {
+    id: "chaff-horde",
+    name: "Chaff Horde",
+    desc: "6+ save, 20 models",
+    modelCount: 20, health: "1", save: "6+", points: 160,
+    keywords: ["INFANTRY"],
+  },
+  {
+    id: "light-infantry",
+    name: "Light Infantry",
+    desc: "5+ save, 10 models",
+    modelCount: 10, health: "1", save: "5+", points: 90,
+    keywords: ["INFANTRY"],
+  },
+  {
+    id: "medium-infantry",
+    name: "Medium Infantry",
+    desc: "4+ save, 10 models",
+    modelCount: 10, health: "1", save: "4+", points: 100,
+    keywords: ["INFANTRY"],
+  },
+  {
+    id: "elite-infantry",
+    name: "Elite Infantry",
+    desc: "3+ save, 2W, 5 models",
+    modelCount: 5, health: "2", save: "3+", points: 120,
+    keywords: ["INFANTRY", "CHAMPION"],
+  },
+  {
+    id: "elite-ward",
+    name: "Elite Infantry (Ward)",
+    desc: "3+ save, 2W, 5+ ward, 5 models",
+    modelCount: 5, health: "2", save: "3+", points: 140,
+    keywords: ["INFANTRY", "CHAMPION"],
+    ward: "5+",
+  },
+  {
+    id: "heavy-infantry",
+    name: "Heavy Infantry",
+    desc: "2+ save, 3W, 3 models",
+    modelCount: 3, health: "3", save: "2+", points: 200,
+    keywords: ["INFANTRY"],
+  },
+  {
+    id: "light-cavalry",
+    name: "Light Cavalry",
+    desc: "4+ save, 3W, 5 models",
+    modelCount: 5, health: "3", save: "4+", points: 150,
+    keywords: ["CAVALRY"],
+  },
+  {
+    id: "heavy-cavalry",
+    name: "Heavy Cavalry",
+    desc: "3+ save, 5W, 3 models",
+    modelCount: 3, health: "5", save: "3+", points: 200,
+    keywords: ["CAVALRY"],
+  },
+  {
+    id: "monster",
+    name: "Monster",
+    desc: "3+ save, 12W, 1 model",
+    modelCount: 1, health: "12", save: "3+", points: 280,
+    keywords: ["MONSTER"],
+  },
+  {
+    id: "hero",
+    name: "Hero",
+    desc: "4+ save, 5W, 1 model",
+    modelCount: 1, health: "5", save: "4+", points: 140,
+    keywords: ["HERO", "INFANTRY"],
+  },
+  {
+    id: "hero-monster",
+    name: "Hero Monster",
+    desc: "3+ save, 14W, 1 model",
+    modelCount: 1, health: "14", save: "3+", points: 320,
+    keywords: ["HERO", "MONSTER"],
+  },
+];
