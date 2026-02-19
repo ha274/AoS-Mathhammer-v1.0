@@ -249,11 +249,11 @@ export default function DataImport({ units, setUnits, showLegacy, setShowLegacy 
 
   return <div style={{ marginBottom: 14 }}>
     <button onClick={() => setExpanded(!expanded)} style={{
-      background: expanded ? "rgba(92,204,136,0.08)" : "transparent",
-      border: `1px solid ${expanded ? "rgba(92,204,136,0.25)" : "rgba(255,255,255,0.06)"}`,
-      color: expanded ? "#5cc888" : C.fGold, borderRadius: 4, cursor: "pointer", fontSize: 10,
-      padding: "4px 10px", fontFamily: "'Cinzel', serif", letterSpacing: 1, textTransform: "uppercase",
-      width: "100%", textAlign: "left", transition: "all 0.15s",
+      background: expanded ? "rgba(92,204,136,0.12)" : "rgba(92,204,136,0.10)",
+      border: `1px solid ${expanded ? "rgba(92,204,136,0.4)" : "rgba(92,204,136,0.35)"}`,
+      color: "#5cc888", borderRadius: 4, cursor: "pointer", fontSize: 11,
+      padding: "6px 10px", fontFamily: "'Cinzel', serif", letterSpacing: 1, textTransform: "uppercase",
+      width: "100%", textAlign: "left", transition: "all 0.15s", fontWeight: 600,
     }}>
       {expanded ? "▾" : "▸"} BSData Import (shared)
       {units.length > 0 && !loading && <span style={{ marginLeft: 8, fontSize: 9, color: "#5cc888" }}>
