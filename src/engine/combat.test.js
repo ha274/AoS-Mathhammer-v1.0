@@ -7,6 +7,8 @@ import {
   calcPFailSave,
   calcEffSave,
   calcPFailWard,
+  applyRerollPass,
+  applyRerollFail,
   parseAntiAbilities,
   resolveAnti,
   simulateCombat,
@@ -290,11 +292,11 @@ function makeUnit(overrides = {}) {
 }
 
 function defaultMods() {
-  return { hitMod: 0, woundMod: 0, rendMod: 0, damageMod: 0, extraAttacks: 0, allOutAttack: false, champion: false, critBuff: '', critOn: 6 };
+  return { hitMod: 0, woundMod: 0, rendMod: 0, damageMod: 0, extraAttacks: 0, allOutAttack: false, champion: false, critBuff: '', critOn: 6, hitReroll: 'off', woundReroll: 'off' };
 }
 
 function defaultDefMods() {
-  return { allOutDefence: false, saveMod: 0, ward: null, save6Reflect: false };
+  return { allOutDefence: false, saveMod: 0, ward: null, save6Reflect: false, saveReroll: 'off' };
 }
 
 function defaultOpts() {
@@ -568,6 +570,78 @@ describe('simulateCombat', () => {
       const result = simulateCombat(companionUnit(), makeUnit(), atkMods, defaultDefMods(), defaultOpts());
       expect(result.weapons[0].hasCM).toBe(false);
       expect(result.weapons[0].critFromBuff).toBe(false);
+    });
+
+    it('treats weapon as companion when companion checkbox is true', () => {
+      const attacker = makeUnit({
+        weapons: [{
+          name: 'Custom Beast',
+          type: 'melee',
+          attacks: '3',
+          hit: '4+',
+          wound: '3+',
+          rend: '1',
+          damage: '2',
+          ability: '-',
+          companion: true,
+          enabled: true,
+          modelCount: 1,
+        }],
+      });
+      const atkMods = { ...defaultMods(), extraAttacks: 2, rendMod: 1, damageMod: 1 };
+      const result = simulateCombat(attacker, makeUnit(), atkMods, defaultDefMods(), defaultOpts());
+      const base = simulateCombat(attacker, makeUnit(), defaultMods(), defaultDefMods(), defaultOpts());
+      // Companion via checkbox ignores extra attacks, rend, damage mods — same as ability-based
+      expect(result.totalDamage).toBeCloseTo(base.totalDamage);
+      expect(result.weapons[0].isComp).toBe(true);
+    });
+
+    it('companion checkbox false overrides ability text', () => {
+      const attacker = makeUnit({
+        weapons: [{
+          name: 'Not Actually Companion',
+          type: 'melee',
+          attacks: '3',
+          hit: '4+',
+          wound: '3+',
+          rend: '1',
+          damage: '2',
+          ability: 'Companion',
+          companion: false,
+          enabled: true,
+          modelCount: 1,
+        }],
+      });
+      const atkMods = { ...defaultMods(), extraAttacks: 2 };
+      const result = simulateCombat(attacker, makeUnit(), atkMods, defaultDefMods(), defaultOpts());
+      const base = simulateCombat(attacker, makeUnit(), defaultMods(), defaultDefMods(), defaultOpts());
+      // companion: false overrides ability text — extra attacks SHOULD apply
+      expect(result.totalDamage).toBeGreaterThan(base.totalDamage);
+      expect(result.weapons[0].isComp).toBe(false);
+    });
+
+    it('falls back to ability text when companion field is undefined', () => {
+      const attacker = makeUnit({
+        weapons: [{
+          name: 'Legacy Companion',
+          type: 'melee',
+          attacks: '3',
+          hit: '4+',
+          wound: '3+',
+          rend: '1',
+          damage: '2',
+          ability: 'Companion',
+          enabled: true,
+          modelCount: 1,
+          // no companion field — should fall back to ability parsing
+        }],
+      });
+      const atkMods = { ...defaultMods(), extraAttacks: 2 };
+      const result = simulateCombat(attacker, makeUnit(), atkMods, defaultDefMods(), defaultOpts());
+      const base = simulateCombat(attacker, makeUnit(), defaultMods(), defaultDefMods(), defaultOpts());
+      // Falls back to ability text parsing — extra attacks ignored
+      expect(result.totalDamage).toBeCloseTo(base.totalDamage);
+      expect(result.weapons[0].isComp).toBe(true);
     });
   });
 
@@ -879,5 +953,89 @@ describe('calcExtraMortals', () => {
     // fExtraMortals = fPTDmg + fOnXDmg + fPMDmg + reflectToSecond
     expect(result.fExtraMortals).toBeCloseTo(result.fPTDmg + result.fOnXDmg + result.fPMDmg + result.reflectToSecond);
     expect(result.sExtraMortals).toBeCloseTo(result.sPTDmg + result.sOnXDmg + result.sPMDmg + result.reflectToFirst);
+  });
+});
+
+// ============================================================
+// Reroll helpers
+// ============================================================
+describe('applyRerollPass', () => {
+  it('returns original probability when reroll is off', () => {
+    expect(applyRerollPass(0.5, 'off')).toBe(0.5);
+  });
+
+  it('applies reroll ones correctly', () => {
+    // Reroll 1s on hit: pPass + (1/6) * pPass
+    const p = probPass(4); // 0.5 for 4+
+    const result = applyRerollPass(p, 'ones');
+    expect(result).toBeCloseTo(p + (1 / 6) * p);
+  });
+
+  it('applies full reroll correctly', () => {
+    // Full reroll: 1 - (1 - pPass)^2
+    const p = probPass(4); // 0.5 for 4+
+    const result = applyRerollPass(p, 'full');
+    expect(result).toBeCloseTo(1 - Math.pow(1 - p, 2));
+    expect(result).toBeCloseTo(0.75); // 1 - 0.25 = 0.75
+  });
+});
+
+describe('applyRerollFail', () => {
+  it('returns original probability when reroll is off', () => {
+    expect(applyRerollFail(0.5, 'off')).toBe(0.5);
+  });
+
+  it('applies reroll ones on fail correctly', () => {
+    const pFail = probFail(4); // 0.5 for 4+
+    const result = applyRerollFail(pFail, 'ones');
+    expect(result).toBeCloseTo(pFail * (7 / 6) - (1 / 6));
+  });
+
+  it('applies full reroll on fail correctly', () => {
+    // Full reroll fail: pFail^2
+    const pFail = probFail(4); // 0.5
+    const result = applyRerollFail(pFail, 'full');
+    expect(result).toBeCloseTo(pFail * pFail);
+    expect(result).toBeCloseTo(0.25);
+  });
+});
+
+// ============================================================
+// simulateCombat with rerolls
+// ============================================================
+describe('simulateCombat rerolls', () => {
+  it('hit reroll ones increases damage', () => {
+    const attacker = makeUnit();
+    const base = simulateCombat(attacker, makeUnit(), defaultMods(), defaultDefMods(), defaultOpts());
+    const withReroll = simulateCombat(attacker, makeUnit(), { ...defaultMods(), hitReroll: 'ones' }, defaultDefMods(), defaultOpts());
+    expect(withReroll.totalDamage).toBeGreaterThan(base.totalDamage);
+  });
+
+  it('full hit reroll increases damage more than reroll ones', () => {
+    const attacker = makeUnit();
+    const ones = simulateCombat(attacker, makeUnit(), { ...defaultMods(), hitReroll: 'ones' }, defaultDefMods(), defaultOpts());
+    const full = simulateCombat(attacker, makeUnit(), { ...defaultMods(), hitReroll: 'full' }, defaultDefMods(), defaultOpts());
+    expect(full.totalDamage).toBeGreaterThan(ones.totalDamage);
+  });
+
+  it('wound reroll ones increases damage', () => {
+    const attacker = makeUnit();
+    const base = simulateCombat(attacker, makeUnit(), defaultMods(), defaultDefMods(), defaultOpts());
+    const withReroll = simulateCombat(attacker, makeUnit(), { ...defaultMods(), woundReroll: 'ones' }, defaultDefMods(), defaultOpts());
+    expect(withReroll.totalDamage).toBeGreaterThan(base.totalDamage);
+  });
+
+  it('save reroll reduces damage (defender rerolling saves)', () => {
+    const attacker = makeUnit();
+    const base = simulateCombat(attacker, makeUnit(), defaultMods(), defaultDefMods(), defaultOpts());
+    const withReroll = simulateCombat(attacker, makeUnit(), defaultMods(), { ...defaultDefMods(), saveReroll: 'full' }, defaultOpts());
+    expect(withReroll.totalDamage).toBeLessThan(base.totalDamage);
+  });
+
+  it('combined hit and wound rerolls stack', () => {
+    const attacker = makeUnit();
+    const hitOnly = simulateCombat(attacker, makeUnit(), { ...defaultMods(), hitReroll: 'full' }, defaultDefMods(), defaultOpts());
+    const both = simulateCombat(attacker, makeUnit(), { ...defaultMods(), hitReroll: 'full', woundReroll: 'full' }, defaultDefMods(), defaultOpts());
+    expect(both.totalDamage).toBeGreaterThan(hitOnly.totalDamage);
   });
 });

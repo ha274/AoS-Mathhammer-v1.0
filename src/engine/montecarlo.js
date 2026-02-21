@@ -48,14 +48,51 @@ function passesCheck(threshold) {
   return roll >= threshold;
 }
 
+/** Roll d6 with reroll support. Returns the final roll value. */
+function rollD6WithReroll(rerollType) {
+  let roll = rollD6();
+  if (rerollType === "ones" && roll === 1) roll = rollD6();
+  else if (rerollType === "full") {
+    // For full reroll we need to know if it failed, but we don't know threshold here.
+    // So we return the roll and let caller handle it.
+  }
+  return roll;
+}
+
+/** AoS d6 check with reroll: rerollType = "off" | "ones" | "full" */
+function passesCheckReroll(threshold, rerollType) {
+  let roll = rollD6();
+  const passed = roll === 6 || (roll !== 1 && roll >= threshold);
+  if (!passed && rerollType !== "off") {
+    if (rerollType === "ones" && roll === 1) roll = rollD6();
+    else if (rerollType === "full") roll = rollD6();
+    else return false;
+    return roll === 6 || (roll !== 1 && roll >= threshold);
+  }
+  return passed;
+}
+
+/** D6 save roll with reroll. Returns { roll, passed } */
+function saveRollWithReroll(effSave, rerollType) {
+  let roll = rollD6();
+  let passed = effSave < 7 && (roll === 6 || (roll !== 1 && roll >= effSave));
+  if (!passed && rerollType !== "off") {
+    if (rerollType === "ones" && roll === 1) roll = rollD6();
+    else if (rerollType === "full") roll = rollD6();
+    else return { roll, passed };
+    passed = effSave < 7 && (roll === 6 || (roll !== 1 && roll >= effSave));
+  }
+  return { roll, passed };
+}
+
 // --- Single weapon resolution (one iteration) ---
 
-function resolveWeapon(weapon, modelCount, atkMods, defSave, defWardTh, rend, dmg, hitTh, wndTh, critTh, hasCM, hasCW, hasCH, isChampionWeapon) {
+function resolveWeapon(weapon, modelCount, atkMods, defSave, defWardTh, rend, dmg, hitTh, wndTh, critTh, hasCM, hasCW, hasCH, isChampionWeapon, hitReroll, woundReroll, saveReroll) {
   const eH = Math.max(2, (hitTh || 4));
   const eW = Math.max(2, (wndTh || 4));
 
   // Roll number of attacks (handles dice notation like "D6")
-  const isComp = (weapon.ability || "").toLowerCase().includes("companion");
+  const isComp = weapon.companion ?? (weapon.ability || "").toLowerCase().includes("companion");
   let baseAtk = rollDice(weapon.attacks);
   if (!isComp) {
     baseAtk += (atkMods.extraAttacks || 0);
@@ -64,14 +101,22 @@ function resolveWeapon(weapon, modelCount, atkMods, defSave, defWardTh, rend, dm
   const totalAtks = Math.max(0, Math.round(baseAtk * modelCount));
 
   let normalDmg = 0, mortalDmg = 0;
+  const hr = hitReroll || "off";
+  const wr = woundReroll || "off";
+  const sr = saveReroll || "off";
 
   for (let a = 0; a < totalAtks; a++) {
-    // Hit roll
-    const hitRoll = rollD6();
-    const hitPassed = hitRoll === 6 || (hitRoll !== 1 && hitRoll >= eH);
+    // Hit roll (with reroll support)
+    let hitRoll = rollD6();
+    let hitPassed = hitRoll === 6 || (hitRoll !== 1 && hitRoll >= eH);
+    if (!hitPassed && hr !== "off") {
+      if (hr === "ones" && hitRoll === 1) hitRoll = rollD6();
+      else if (hr === "full") hitRoll = rollD6();
+      hitPassed = hitRoll === 6 || (hitRoll !== 1 && hitRoll >= eH);
+    }
     if (!hitPassed) continue;
 
-    // Crit check (on the same hit roll)
+    // Crit check (on the final hit roll)
     const isCrit = hitRoll >= critTh;
 
     if (hasCM && isCrit) {
@@ -83,29 +128,26 @@ function resolveWeapon(weapon, modelCount, atkMods, defSave, defWardTh, rend, dm
     } else if (hasCW && isCrit) {
       // Crit (Auto-wound): skip wound roll, go straight to save
       const effSave = calcEffSave(defSave, rend, 0, false);
-      const saveRoll = rollD6();
-      const savePassed = effSave < 7 && (saveRoll === 6 || (saveRoll !== 1 && saveRoll >= effSave));
-      if (savePassed) continue;
+      const sv = saveRollWithReroll(effSave, sr);
+      if (sv.passed) continue;
       if (defWardTh != null && passesCheck(defWardTh)) continue;
       normalDmg += dmg;
     } else if (hasCH && isCrit) {
       // Crit (2 Hits): generates 2 wound rolls
       for (let h = 0; h < 2; h++) {
-        if (!passesCheck(eW)) continue;
+        if (!passesCheckReroll(eW, wr)) continue;
         const effSave = calcEffSave(defSave, rend, 0, false);
-        const saveRoll = rollD6();
-        const savePassed = effSave < 7 && (saveRoll === 6 || (saveRoll !== 1 && saveRoll >= effSave));
-        if (savePassed) continue;
+        const sv = saveRollWithReroll(effSave, sr);
+        if (sv.passed) continue;
         if (defWardTh != null && passesCheck(defWardTh)) continue;
         normalDmg += dmg;
       }
     } else {
       // Normal hit: wound → save → ward
-      if (!passesCheck(eW)) continue;
+      if (!passesCheckReroll(eW, wr)) continue;
       const effSave = calcEffSave(defSave, rend, 0, false);
-      const saveRoll = rollD6();
-      const savePassed = effSave < 7 && (saveRoll === 6 || (saveRoll !== 1 && saveRoll >= effSave));
-      if (savePassed) continue;
+      const sv = saveRollWithReroll(effSave, sr);
+      if (sv.passed) continue;
       if (defWardTh != null && passesCheck(defWardTh)) continue;
       normalDmg += dmg;
     }
@@ -131,7 +173,7 @@ function rollAllWeapons(attacker, defender, atkMods, defMods, options, modelOver
       const wt = (w.type || "melee").toLowerCase();
       if (weaponFilter === "ranged" && wt !== "ranged") continue;
       if (weaponFilter === "melee" && wt !== "melee") continue;
-      if ((w.ability || "").toLowerCase().includes("companion")) continue;
+      if (w.companion ?? (w.ability || "").toLowerCase().includes("companion")) continue;
       if (!championWeapon
         || (w.modelCount || 1) > (championWeapon.modelCount || 1)
         || ((w.modelCount || 1) === (championWeapon.modelCount || 1) && parseDice(w.damage) < parseDice(championWeapon.damage))) {
@@ -146,7 +188,7 @@ function rollAllWeapons(attacker, defender, atkMods, defMods, options, modelOver
     if (weaponFilter === "ranged" && wType !== "ranged") continue;
     if (weaponFilter === "melee" && wType !== "melee") continue;
 
-    const isComp = (weapon.ability || "").toLowerCase().includes("companion");
+    const isComp = weapon.companion ?? (weapon.ability || "").toLowerCase().includes("companion");
     const wBase = weapon.modelCount || attacker.modelCount || 1;
     let wM = wBase;
     if (modelOverride !== null && modelOverride !== undefined) {
@@ -213,7 +255,10 @@ function rollAllWeapons(attacker, defender, atkMods, defMods, options, modelOver
       wardTh,
       rend, dmg, hitTh, wndTh, critTh,
       hasCM, hasCW, hasCH,
-      weapon === championWeapon
+      weapon === championWeapon,
+      atkMods.hitReroll || "off",
+      atkMods.woundReroll || "off",
+      defMods.saveReroll || "off"
     );
     totalNormal += result.normalDmg;
     totalMortal += result.mortalDmg;

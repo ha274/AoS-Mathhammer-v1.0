@@ -7,6 +7,7 @@ export const emptyWeapon = () => ({
   rend: "-",
   damage: "1",
   ability: "-",
+  companion: false,
   modelCount: 1,
   enabled: true,
 });
@@ -30,6 +31,10 @@ export const defaultMods = () => ({
   onXTiming: "after", // "before" | "during" | "after" combat
   // "Roll per enemy model, on X+ do 1 mortal each"
   perModelThreshold: "",
+  // Rerolls: "off" | "ones" | "full"
+  hitReroll: "off",
+  woundReroll: "off",
+  saveReroll: "off",
 });
 
 export const defaultOpts = () => ({

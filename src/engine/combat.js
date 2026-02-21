@@ -49,6 +49,20 @@ export function calcPFailWard(wardTh) {
   return wardTh == null ? 1 : probFail(wardTh);
 }
 
+// Reroll helpers for expected-value math
+// "ones" = reroll rolls of 1 only; "full" = reroll all fails
+export function applyRerollPass(pPass, rerollType) {
+  if (rerollType === "ones") return pPass + (1 / 6) * pPass;
+  if (rerollType === "full") return 1 - Math.pow(1 - pPass, 2);
+  return pPass;
+}
+
+export function applyRerollFail(pFail, rerollType) {
+  if (rerollType === "ones") return pFail * (7 / 6) - (1 / 6);
+  if (rerollType === "full") return pFail * pFail;
+  return pFail;
+}
+
 export function parseAntiAbilities(ab) {
   if (!ab || ab === "-") return [];
   const out = [];
@@ -90,7 +104,7 @@ export function simulateCombat(attacker, defender, atkMods, defMods, options = {
       const wt = (w.type || "melee").toLowerCase();
       if (weaponFilter === "ranged" && wt !== "ranged") continue;
       if (weaponFilter === "melee" && wt !== "melee") continue;
-      if ((w.ability || "").toLowerCase().includes("companion")) continue;
+      if (w.companion ?? (w.ability || "").toLowerCase().includes("companion")) continue;
       if (!championWeapon
         || (w.modelCount || 1) > (championWeapon.modelCount || 1)
         || ((w.modelCount || 1) === (championWeapon.modelCount || 1) && parseDice(w.damage) < parseDice(championWeapon.damage))) {
@@ -105,7 +119,7 @@ export function simulateCombat(attacker, defender, atkMods, defMods, options = {
     if (weaponFilter === "ranged" && wType !== "ranged") continue;
     if (weaponFilter === "melee" && wType !== "melee") continue;
 
-    const isComp = (weapon.ability || "").toLowerCase().includes("companion");
+    const isComp = weapon.companion ?? (weapon.ability || "").toLowerCase().includes("companion");
     const wBase = weapon.modelCount || attacker.modelCount || 1;
     let wM = wBase;
     if (modelOverride !== null) {
@@ -149,14 +163,14 @@ export function simulateCombat(attacker, defender, atkMods, defMods, options = {
     dmg += anti.dmgBonus;
 
     const eH = Math.max(2, (hitTh || 4) - hitMod);
-    const pH = probPass(eH);
+    const pH = applyRerollPass(probPass(eH), atkMods.hitReroll || "off");
     const critTh = isComp ? 6 : Math.max(2, Math.min(6, atkMods.critOn || 6));
     const pC = (7 - critTh) / 6;
     const eW = Math.max(2, (wndTh || 4) - wndMod);
-    const pW = probPass(eW);
+    const pW = applyRerollPass(probPass(eW), atkMods.woundReroll || "off");
     const totalSaveMod = (defMods.saveMod || 0) + (defMods.allOutDefence ? 1 : 0);
     const eS = calcEffSave(defSave, rend, totalSaveMod, false);
-    const pFS = calcPFailSave(defSave, rend, totalSaveMod, false);
+    const pFS = applyRerollFail(calcPFailSave(defSave, rend, totalSaveMod, false), defMods.saveReroll || "off");
 
     const profileCM = ab.includes("crit (mortal)");
     const profileCW = ab.includes("crit (auto-wound)");

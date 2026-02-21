@@ -70,6 +70,10 @@ export default function UnitPanel({ label, unit, setUnit, atkMods, setAtkMods, d
   const [showCrit, setShowCrit] = useState(false);
   const [showMortals, setShowMortals] = useState(false);
   const [showAbilities, setShowAbilities] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [showWeapons, setShowWeapons] = useState(false);
+  const [showAtkBuffs, setShowAtkBuffs] = useState(false);
+  const [showDefBuffs, setShowDefBuffs] = useState(false);
   const [preReinforce, setPreReinforce] = useState(null);
   const [libSaved, setLibSaved] = useState(false);
   const uW = (i, w) => { const ws = [...unit.weapons]; ws[i] = w; setUnit({ ...unit, weapons: ws }); };
@@ -202,26 +206,40 @@ export default function UnitPanel({ label, unit, setUnit, atkMods, setAtkMods, d
       </div>
     </div>
 
-    <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-      {[["modelCount", "Models", "number"], ["health", "Health"], ["save", "Save"], ["control", "Control", "number"]].map(([k, l, t]) =>
-        <div key={k} style={{ flex: 1, minWidth: 55 }}><div style={lbl}>{l}</div>
-          <input type={t || "text"} value={unit[k]} onChange={e => {
-            const val = t === "number" ? (parseInt(e.target.value) || 1) : e.target.value;
-            if (k === "modelCount") {
-              const newWeapons = unit.weapons.map(w => ({ ...w, modelCount: val }));
-              setUnit({ ...unit, modelCount: val, weapons: newWeapons });
-            } else {
-              setUnit({ ...unit, [k]: val });
-            }
-          }} style={{ ...bI, textAlign: "center" }} min={t === "number" ? 1 : undefined} /></div>
-      )}
-    </div>
-
-    <div style={{ marginBottom: 10 }}>
-      <div style={lbl}>Keywords</div>
-      <input value={(unit.keywords || []).join(", ")}
-        onChange={e => setUnit({ ...unit, keywords: e.target.value.split(",").map(k => k.trim()).filter(Boolean) })}
-        style={{ ...bI, fontSize: 11 }} placeholder="INFANTRY, MONSTER, DAEMON..." />
+    <div style={{ marginBottom: 8 }}>
+      <button onClick={() => setShowStats(!showStats)} style={{
+        background: "transparent", border: "1px solid rgba(255,255,255,0.06)",
+        color: C.fGold, borderRadius: 4, cursor: "pointer", fontSize: 10,
+        padding: "4px 10px", fontFamily: "'Cinzel', serif", letterSpacing: 1,
+        textTransform: "uppercase", width: "100%", textAlign: "left",
+      }}>
+        {showStats ? "\u25BE" : "\u25B8"} Unit Stats
+        {!showStats && <span style={{ marginLeft: 8, fontSize: 9, opacity: 0.8 }}>
+          {unit.modelCount || 1} models | HP {unit.health} | Sv {unit.save}
+        </span>}
+      </button>
+      {showStats && <div style={{ marginTop: 6 }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+          {[["modelCount", "Models", "number"], ["health", "Health"], ["save", "Save"], ["control", "Control", "number"]].map(([k, l, t]) =>
+            <div key={k} style={{ flex: 1, minWidth: 55 }}><div style={lbl}>{l}</div>
+              <input type={t || "text"} value={unit[k]} onChange={e => {
+                const val = t === "number" ? (parseInt(e.target.value) || 1) : e.target.value;
+                if (k === "modelCount") {
+                  const newWeapons = unit.weapons.map(w => ({ ...w, modelCount: val }));
+                  setUnit({ ...unit, modelCount: val, weapons: newWeapons });
+                } else {
+                  setUnit({ ...unit, [k]: val });
+                }
+              }} style={{ ...bI, textAlign: "center" }} min={t === "number" ? 1 : undefined} /></div>
+          )}
+        </div>
+        <div style={{ marginBottom: 10 }}>
+          <div style={lbl}>Keywords</div>
+          <input value={(unit.keywords || []).join(", ")}
+            onChange={e => setUnit({ ...unit, keywords: e.target.value.split(",").map(k => k.trim()).filter(Boolean) })}
+            style={{ ...bI, fontSize: 11 }} placeholder="INFANTRY, MONSTER, DAEMON..." />
+        </div>
+      </div>}
     </div>
 
     {/* UNIT ABILITIES */}
@@ -295,18 +313,41 @@ export default function UnitPanel({ label, unit, setUnit, atkMods, setAtkMods, d
 
     <div style={{ borderTop: `1px solid ${sc}22`, paddingTop: 10, marginTop: 4 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ ...lbl, marginBottom: 0, fontSize: 11 }}>WEAPONS</span>
-        <button onClick={() => setUnit({ ...unit, weapons: [...unit.weapons, emptyWeapon()] })} style={{ background: `${sc}22`, border: `1px solid ${sc}44`, color: sc, borderRadius: 4, cursor: "pointer", fontSize: 11, padding: "2px 8px", fontFamily: "'Cinzel', serif" }}>+ Add</button>
+        <button onClick={() => setShowWeapons(!showWeapons)} style={{
+          background: "transparent", border: "1px solid rgba(255,255,255,0.06)",
+          color: C.fGold, borderRadius: 4, cursor: "pointer", fontSize: 10,
+          padding: "4px 10px", fontFamily: "'Cinzel', serif", letterSpacing: 1,
+          textTransform: "uppercase", textAlign: "left", flex: 1,
+        }}>
+          {showWeapons ? "\u25BE" : "\u25B8"} Weapons ({unit.weapons.filter(w => w.enabled).length})
+          {!showWeapons && <span style={{ marginLeft: 8, fontSize: 9, opacity: 0.8 }}>
+            {unit.weapons.filter(w => w.enabled).map(w => w.name).join(", ")}
+          </span>}
+        </button>
+        <button onClick={() => setUnit({ ...unit, weapons: [...unit.weapons, emptyWeapon()] })} style={{ background: `${sc}22`, border: `1px solid ${sc}44`, color: sc, borderRadius: 4, cursor: "pointer", fontSize: 11, padding: "2px 8px", fontFamily: "'Cinzel', serif", marginLeft: 6 }}>+ Add</button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "34px 1.4fr 40px 38px 38px 38px 38px 1fr 34px 28px", gap: 4, padding: "2px 0", borderBottom: "1px solid rgba(201,168,76,0.15)" }}>
-        {["Type", "Name", "Atk", "Hit", "Wnd", "Rnd", "Dmg", "Ability", "#", ""].map(h => <span key={h} style={{ fontSize: 9, color: C.fGold, textTransform: "uppercase", textAlign: "center", letterSpacing: 0.8 }}>{h}</span>)}
-      </div>
-      {unit.weapons.map((w, i) => <WeaponRow key={i} w={w} onChange={w => uW(i, w)} onRemove={() => setUnit({ ...unit, weapons: unit.weapons.filter((_, j) => j !== i) })} canRemove={unit.weapons.length > 1} />)}
+      {showWeapons && <>
+        <div style={{ display: "grid", gridTemplateColumns: "34px 1.4fr 40px 38px 38px 38px 38px 1fr 26px 34px 28px", gap: 4, padding: "2px 0", borderBottom: "1px solid rgba(201,168,76,0.15)" }}>
+          {["Type", "Name", "Atk", "Hit", "Wnd", "Rnd", "Dmg", "Ability", "\uD83D\uDC32", "#", ""].map(h => <span key={h} style={{ fontSize: 9, color: C.fGold, textTransform: "uppercase", textAlign: "center", letterSpacing: 0.8 }}>{h}</span>)}
+        </div>
+        {unit.weapons.map((w, i) => <WeaponRow key={i} w={w} onChange={w => uW(i, w)} onRemove={() => setUnit({ ...unit, weapons: unit.weapons.filter((_, j) => j !== i) })} canRemove={unit.weapons.length > 1} />)}
+      </>}
     </div>
 
     {/* ATTACK BUFFS */}
     <div style={{ borderTop: `1px solid ${C.gold}22`, paddingTop: 10, marginTop: 12 }}>
-      <div style={{ fontSize: 11, color: C.gold, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8, fontFamily: "'Cinzel', serif" }}>Attack Buffs</div>
+      <button onClick={() => setShowAtkBuffs(!showAtkBuffs)} style={{
+        background: "transparent", border: "1px solid rgba(255,255,255,0.06)",
+        color: C.gold, borderRadius: 4, cursor: "pointer", fontSize: 10,
+        padding: "4px 10px", fontFamily: "'Cinzel', serif", letterSpacing: 1,
+        textTransform: "uppercase", width: "100%", textAlign: "left", marginBottom: 8,
+      }}>
+        {showAtkBuffs ? "\u25BE" : "\u25B8"} Attack Buffs
+        {!showAtkBuffs && <span style={{ marginLeft: 8, fontSize: 9, opacity: 0.8 }}>
+          {[atkMods.allOutAttack && "AoA", options.charged && "Charged", (atkMods.hitReroll || "off") !== "off" && `Hit RR: ${{ones:"1s",full:"Full"}[atkMods.hitReroll]}`, (atkMods.woundReroll || "off") !== "off" && `Wnd RR: ${{ones:"1s",full:"Full"}[atkMods.woundReroll]}`].filter(Boolean).join(" | ") || "None active"}
+        </span>}
+      </button>
+      {showAtkBuffs && <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
         <Tog on={atkMods.allOutAttack} click={() => setAtkMods({ ...atkMods, allOutAttack: !atkMods.allOutAttack })} color={C.gold}>All-Out Attack</Tog>
         {(unit.keywords || []).some(k => k.toUpperCase() === "CHAMPION") &&
@@ -319,6 +360,14 @@ export default function UnitPanel({ label, unit, setUnit, atkMods, setAtkMods, d
           : <Tog on={false} click={() => {}} color="#444">Power Through</Tog>
         }
         <Tog on={options.fightTwice} click={() => setOptions({ ...options, fightTwice: !options.fightTwice })} color="#b888dd">Fight Twice</Tog>
+        <Tog on={(atkMods.hitReroll || "off") !== "off"} click={() => {
+          const c = ["off", "ones", "full"];
+          setAtkMods({ ...atkMods, hitReroll: c[(c.indexOf(atkMods.hitReroll || "off") + 1) % c.length] });
+        }} color={(atkMods.hitReroll || "off") !== "off" ? "#68b8e8" : C.fGold}>Hit RR: {{ off: "Off", ones: "1s", full: "Full" }[atkMods.hitReroll || "off"]}</Tog>
+        <Tog on={(atkMods.woundReroll || "off") !== "off"} click={() => {
+          const c = ["off", "ones", "full"];
+          setAtkMods({ ...atkMods, woundReroll: c[(c.indexOf(atkMods.woundReroll || "off") + 1) % c.length] });
+        }} color={(atkMods.woundReroll || "off") !== "off" ? "#68b8e8" : C.fGold}>Wnd RR: {{ off: "Off", ones: "1s", full: "Full" }[atkMods.woundReroll || "off"]}</Tog>
       </div>
       {options.fightTwice && <div style={{ fontSize: 9, color: "#887755", fontStyle: "italic", marginTop: 2, marginBottom: 4 }}>
         2 FIGHT abilities this phase. After the first, this unit has STRIKE-LAST.
@@ -495,11 +544,23 @@ export default function UnitPanel({ label, unit, setUnit, atkMods, setAtkMods, d
           </div>}
         </div>;
       })()}
+    </>}
     </div>
 
     {/* DEFENCE BUFFS */}
     <div style={{ borderTop: `1px solid ${C.red}22`, paddingTop: 10, marginTop: 12 }}>
-      <div style={{ fontSize: 11, color: C.red, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8, fontFamily: "'Cinzel', serif" }}>Defence Buffs</div>
+      <button onClick={() => setShowDefBuffs(!showDefBuffs)} style={{
+        background: "transparent", border: "1px solid rgba(255,255,255,0.06)",
+        color: C.red, borderRadius: 4, cursor: "pointer", fontSize: 10,
+        padding: "4px 10px", fontFamily: "'Cinzel', serif", letterSpacing: 1,
+        textTransform: "uppercase", width: "100%", textAlign: "left", marginBottom: 8,
+      }}>
+        {showDefBuffs ? "\u25BE" : "\u25B8"} Defence Buffs
+        {!showDefBuffs && <span style={{ marginLeft: 8, fontSize: 9, opacity: 0.8 }}>
+          {[defMods.allOutDefence && "AoD", defMods.ward && `Ward ${defMods.ward}`, (defMods.saveReroll || "off") !== "off" && `Sv RR: ${{ones:"1s",full:"Full"}[defMods.saveReroll]}`].filter(Boolean).join(" | ") || "None active"}
+        </span>}
+      </button>
+      {showDefBuffs && <>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
         <Tog on={defMods.allOutDefence} click={() => setDefMods({ ...defMods, allOutDefence: !defMods.allOutDefence })} color={C.red}>All-Out Defence</Tog>
         <Tog on={!!defMods.ward} click={() => {
@@ -507,6 +568,10 @@ export default function UnitPanel({ label, unit, setUnit, atkMods, setAtkMods, d
           setDefMods({ ...defMods, ward: ws[(ws.indexOf(defMods.ward || "") + 1) % ws.length] });
         }} color={defMods.ward ? "#a060c0" : C.fGold}>Ward {defMods.ward || "None"}</Tog>
         <Tog on={options.save6Reflect} click={() => setOptions({ ...options, save6Reflect: !options.save6Reflect })} color="#60a0d0">Save 6 Reflect</Tog>
+        <Tog on={(defMods.saveReroll || "off") !== "off"} click={() => {
+          const c = ["off", "ones", "full"];
+          setDefMods({ ...defMods, saveReroll: c[(c.indexOf(defMods.saveReroll || "off") + 1) % c.length] });
+        }} color={(defMods.saveReroll || "off") !== "off" ? "#68b8e8" : C.fGold}>Sv RR: {{ off: "Off", ones: "1s", full: "Full" }[defMods.saveReroll || "off"]}</Tog>
       </div>
       {options.save6Reflect && <div style={{ fontSize: 9, color: "#607888", fontStyle: "italic", marginTop: -4, marginBottom: 4 }}>
         Save reflect: unmodified save of 6 in combat = 1 mortal back to attacker
@@ -518,6 +583,7 @@ export default function UnitPanel({ label, unit, setUnit, atkMods, setAtkMods, d
             { label: "AoA", value: atkMods.allOutAttack ? -1 : 0, color: "#e86868" }
           ]} />
       </div>
+      </>}
     </div>
   </div>;
 }

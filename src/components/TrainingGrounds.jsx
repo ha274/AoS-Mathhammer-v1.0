@@ -72,6 +72,7 @@ export default function TrainingGrounds({ bsdataUnits, showLegacy, customPresets
   // Defence buff toggles (applied to ALL targets)
   const [defWard, setDefWard] = useState("");
   const [defAOD, setDefAOD] = useState(false);
+  const [defSaveReroll, setDefSaveReroll] = useState("off");
 
   // Reinforce targets toggle (doubles models + points, excludes HERO/MONSTER)
   const [reinforced, setReinforced] = useState(false);
@@ -108,6 +109,9 @@ export default function TrainingGrounds({ bsdataUnits, showLegacy, customPresets
   const [showCrit, setShowCrit] = useState(false);
   const [showMortals, setShowMortals] = useState(false);
   const [showAbilities, setShowAbilities] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [showWeapons, setShowWeapons] = useState(false);
+  const [showAtkBuffs, setShowAtkBuffs] = useState(false);
 
   const lbl = { fontSize: 10, color: C.dGold, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 2 };
 
@@ -166,6 +170,7 @@ export default function TrainingGrounds({ bsdataUnits, showLegacy, customPresets
         ...defaultMods(),
         ward: effectiveWard,
         allOutDefence: defAOD,
+        saveReroll: defSaveReroll,
         champion: false,
       };
 
@@ -256,7 +261,7 @@ export default function TrainingGrounds({ bsdataUnits, showLegacy, customPresets
         pipeline: { atk: pAtk, hits: pHits, wounds: pWounds, dmg: pDmg },
       };
     });
-  }, [effUnit, atkMods, opts, phase, defWard, defAOD, reinforced, targetOverrides]);
+  }, [effUnit, atkMods, opts, phase, defWard, defAOD, defSaveReroll, reinforced, targetOverrides]);
 
   // Overall MH Score = average ROI across all targets
   const overallScore = useMemo(() => {
@@ -310,26 +315,40 @@ export default function TrainingGrounds({ bsdataUnits, showLegacy, customPresets
         <div><div style={lbl}>Points</div><input type="number" value={unit.points} onChange={e => setUnit({ ...unit, points: parseInt(e.target.value) || 0 })} style={{ ...bI, textAlign: "center" }} /></div>
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-        {[["modelCount", "Models", "number"], ["health", "Health"], ["save", "Save"]].map(([k, l, t]) =>
-          <div key={k} style={{ flex: 1, minWidth: 55 }}><div style={lbl}>{l}</div>
-            <input type={t || "text"} value={unit[k]} onChange={e => {
-              const val = t === "number" ? (parseInt(e.target.value) || 1) : e.target.value;
-              if (k === "modelCount") {
-                const newWeapons = unit.weapons.map(w => ({ ...w, modelCount: val }));
-                setUnit({ ...unit, modelCount: val, weapons: newWeapons });
-              } else {
-                setUnit({ ...unit, [k]: val });
-              }
-            }} style={{ ...bI, textAlign: "center" }} min={t === "number" ? 1 : undefined} /></div>
-        )}
-      </div>
-
-      <div style={{ marginBottom: 10 }}>
-        <div style={lbl}>Keywords</div>
-        <input value={(unit.keywords || []).join(", ")}
-          onChange={e => setUnit({ ...unit, keywords: e.target.value.split(",").map(k => k.trim()).filter(Boolean) })}
-          style={{ ...bI, fontSize: 11 }} placeholder="INFANTRY, MONSTER, DAEMON..." />
+      <div style={{ marginBottom: 8 }}>
+        <button onClick={() => setShowStats(!showStats)} style={{
+          background: "transparent", border: "1px solid rgba(255,255,255,0.06)",
+          color: C.fGold, borderRadius: 4, cursor: "pointer", fontSize: 10,
+          padding: "4px 10px", fontFamily: "'Cinzel', serif", letterSpacing: 1,
+          textTransform: "uppercase", width: "100%", textAlign: "left",
+        }}>
+          {showStats ? "\u25BE" : "\u25B8"} Unit Stats
+          {!showStats && <span style={{ marginLeft: 8, fontSize: 9, opacity: 0.8 }}>
+            {unit.modelCount || 1} models | HP {unit.health} | Sv {unit.save}
+          </span>}
+        </button>
+        {showStats && <div style={{ marginTop: 6 }}>
+          <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+            {[["modelCount", "Models", "number"], ["health", "Health"], ["save", "Save"]].map(([k, l, t]) =>
+              <div key={k} style={{ flex: 1, minWidth: 55 }}><div style={lbl}>{l}</div>
+                <input type={t || "text"} value={unit[k]} onChange={e => {
+                  const val = t === "number" ? (parseInt(e.target.value) || 1) : e.target.value;
+                  if (k === "modelCount") {
+                    const newWeapons = unit.weapons.map(w => ({ ...w, modelCount: val }));
+                    setUnit({ ...unit, modelCount: val, weapons: newWeapons });
+                  } else {
+                    setUnit({ ...unit, [k]: val });
+                  }
+                }} style={{ ...bI, textAlign: "center" }} min={t === "number" ? 1 : undefined} /></div>
+            )}
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <div style={lbl}>Keywords</div>
+            <input value={(unit.keywords || []).join(", ")}
+              onChange={e => setUnit({ ...unit, keywords: e.target.value.split(",").map(k => k.trim()).filter(Boolean) })}
+              style={{ ...bI, fontSize: 11 }} placeholder="INFANTRY, MONSTER, DAEMON..." />
+          </div>
+        </div>}
       </div>
 
       {/* UNIT ABILITIES */}
@@ -393,18 +412,41 @@ export default function TrainingGrounds({ bsdataUnits, showLegacy, customPresets
       {/* Weapons */}
       <div style={{ borderTop: `1px solid ${C.gold}22`, paddingTop: 10, marginTop: 4 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <span style={{ ...lbl, marginBottom: 0, fontSize: 11 }}>WEAPONS</span>
-          <button onClick={() => setUnit({ ...unit, weapons: [...unit.weapons, emptyWeapon()] })} style={{ background: `${C.gold}22`, border: `1px solid ${C.gold}44`, color: C.gold, borderRadius: 4, cursor: "pointer", fontSize: 11, padding: "2px 8px", fontFamily: "'Cinzel', serif" }}>+ Add</button>
+          <button onClick={() => setShowWeapons(!showWeapons)} style={{
+            background: "transparent", border: "1px solid rgba(255,255,255,0.06)",
+            color: C.fGold, borderRadius: 4, cursor: "pointer", fontSize: 10,
+            padding: "4px 10px", fontFamily: "'Cinzel', serif", letterSpacing: 1,
+            textTransform: "uppercase", textAlign: "left", flex: 1,
+          }}>
+            {showWeapons ? "\u25BE" : "\u25B8"} Weapons ({unit.weapons.filter(w => w.enabled).length})
+            {!showWeapons && <span style={{ marginLeft: 8, fontSize: 9, opacity: 0.8 }}>
+              {unit.weapons.filter(w => w.enabled).map(w => w.name).join(", ")}
+            </span>}
+          </button>
+          <button onClick={() => setUnit({ ...unit, weapons: [...unit.weapons, emptyWeapon()] })} style={{ background: `${C.gold}22`, border: `1px solid ${C.gold}44`, color: C.gold, borderRadius: 4, cursor: "pointer", fontSize: 11, padding: "2px 8px", fontFamily: "'Cinzel', serif", marginLeft: 6 }}>+ Add</button>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "38px 1fr 52px 44px 44px 44px 44px 1fr 36px 30px", gap: 4, padding: "2px 0", borderBottom: "1px solid rgba(201,168,76,0.15)" }}>
-          {["Type", "Name", "Atk", "Hit", "Wnd", "Rnd", "Dmg", "Ability", "#", ""].map(h => <span key={h} style={{ fontSize: 9, color: C.fGold, textTransform: "uppercase", textAlign: "center", letterSpacing: 0.8 }}>{h}</span>)}
-        </div>
-        {unit.weapons.map((w, i) => <WeaponRow key={i} w={w} onChange={w => uW(i, w)} onRemove={() => setUnit({ ...unit, weapons: unit.weapons.filter((_, j) => j !== i) })} canRemove={unit.weapons.length > 1} />)}
+        {showWeapons && <>
+          <div style={{ display: "grid", gridTemplateColumns: "38px 1fr 52px 44px 44px 44px 44px 1fr 26px 36px 30px", gap: 4, padding: "2px 0", borderBottom: "1px solid rgba(201,168,76,0.15)" }}>
+            {["Type", "Name", "Atk", "Hit", "Wnd", "Rnd", "Dmg", "Ability", "\uD83D\uDC32", "#", ""].map(h => <span key={h} style={{ fontSize: 9, color: C.fGold, textTransform: "uppercase", textAlign: "center", letterSpacing: 0.8 }}>{h}</span>)}
+          </div>
+          {unit.weapons.map((w, i) => <WeaponRow key={i} w={w} onChange={w => uW(i, w)} onRemove={() => setUnit({ ...unit, weapons: unit.weapons.filter((_, j) => j !== i) })} canRemove={unit.weapons.length > 1} />)}
+        </>}
       </div>
 
       {/* Attack Buffs */}
       <div style={{ borderTop: `1px solid ${C.gold}22`, paddingTop: 10, marginTop: 12 }}>
-        <div style={{ fontSize: 11, color: C.gold, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8, fontFamily: "'Cinzel', serif" }}>Attack Buffs</div>
+        <button onClick={() => setShowAtkBuffs(!showAtkBuffs)} style={{
+          background: "transparent", border: "1px solid rgba(255,255,255,0.06)",
+          color: C.gold, borderRadius: 4, cursor: "pointer", fontSize: 10,
+          padding: "4px 10px", fontFamily: "'Cinzel', serif", letterSpacing: 1,
+          textTransform: "uppercase", width: "100%", textAlign: "left", marginBottom: 8,
+        }}>
+          {showAtkBuffs ? "\u25BE" : "\u25B8"} Attack Buffs
+          {!showAtkBuffs && <span style={{ marginLeft: 8, fontSize: 9, opacity: 0.8 }}>
+            {[atkMods.allOutAttack && "AoA", opts.charged && "Charged", (atkMods.hitReroll || "off") !== "off" && `Hit RR: ${{ones:"1s",full:"Full"}[atkMods.hitReroll]}`, (atkMods.woundReroll || "off") !== "off" && `Wnd RR: ${{ones:"1s",full:"Full"}[atkMods.woundReroll]}`].filter(Boolean).join(" | ") || "None active"}
+          </span>}
+        </button>
+        {showAtkBuffs && <>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
           <Tog on={atkMods.allOutAttack} click={() => setAtkMods({ ...atkMods, allOutAttack: !atkMods.allOutAttack })} color={C.gold}>All-Out Attack</Tog>
           {(unit.keywords || []).some(k => k.toUpperCase() === "CHAMPION") &&
@@ -412,6 +454,14 @@ export default function TrainingGrounds({ bsdataUnits, showLegacy, customPresets
           }
           <Tog on={opts.charged} click={() => setOpts({ ...opts, charged: !opts.charged })} color="#c87828">Charged</Tog>
           {unit.modelCount > 1 && <Tog on={atkReinforced} click={() => setAtkReinforced(!atkReinforced)} color="#68b8e8">Reinforce</Tog>}
+          <Tog on={(atkMods.hitReroll || "off") !== "off"} click={() => {
+            const c = ["off", "ones", "full"];
+            setAtkMods({ ...atkMods, hitReroll: c[(c.indexOf(atkMods.hitReroll || "off") + 1) % c.length] });
+          }} color={(atkMods.hitReroll || "off") !== "off" ? "#68b8e8" : C.fGold}>Hit RR: {{ off: "Off", ones: "1s", full: "Full" }[atkMods.hitReroll || "off"]}</Tog>
+          <Tog on={(atkMods.woundReroll || "off") !== "off"} click={() => {
+            const c = ["off", "ones", "full"];
+            setAtkMods({ ...atkMods, woundReroll: c[(c.indexOf(atkMods.woundReroll || "off") + 1) % c.length] });
+          }} color={(atkMods.woundReroll || "off") !== "off" ? "#68b8e8" : C.fGold}>Wnd RR: {{ off: "Off", ones: "1s", full: "Full" }[atkMods.woundReroll || "off"]}</Tog>
         </div>
         {atkReinforced && unit.modelCount > 1 && <div style={{ fontSize: 9, color: "#68b8e8", fontStyle: "italic", marginBottom: 4 }}>
           Reinforced: {effUnit.modelCount} models, {effUnit.points}pts
@@ -548,6 +598,7 @@ export default function TrainingGrounds({ bsdataUnits, showLegacy, customPresets
             </div>}
           </div>;
         })()}
+      </>}
       </div>
     </div>
 
@@ -588,10 +639,14 @@ export default function TrainingGrounds({ bsdataUnits, showLegacy, customPresets
             setDefWard(ws[(ws.indexOf(defWard || "") + 1) % ws.length]);
           }} color={defWard ? "#a060c0" : C.fGold}>Ward {defWard || "None"}</Tog>
           <Tog on={reinforced} click={() => setReinforced(!reinforced)} color="#68b8e8">Reinforce</Tog>
+          <Tog on={(defSaveReroll || "off") !== "off"} click={() => {
+            const c = ["off", "ones", "full"];
+            setDefSaveReroll(c[(c.indexOf(defSaveReroll || "off") + 1) % c.length]);
+          }} color={(defSaveReroll || "off") !== "off" ? "#68b8e8" : C.fGold}>Sv RR: {{ off: "Off", ones: "1s", full: "Full" }[defSaveReroll || "off"]}</Tog>
         </div>
         <div style={{ fontSize: 9, color: "#665", fontStyle: "italic", marginTop: 6 }}>
-          {defAOD ? "+1 Save | " : ""}{defWard ? `Ward ${defWard} | ` : ""}{reinforced ? "2x models & pts (not Heroes/Monsters)" : ""}
-          {!defAOD && !defWard && !reinforced && "Applied to all targets"}
+          {defAOD ? "+1 Save | " : ""}{defWard ? `Ward ${defWard} | ` : ""}{(defSaveReroll || "off") !== "off" ? `Save RR: ${{ones:"1s",full:"Full"}[defSaveReroll]} | ` : ""}{reinforced ? "2x models & pts (not Heroes/Monsters)" : ""}
+          {!defAOD && !defWard && !reinforced && (defSaveReroll || "off") === "off" && "Applied to all targets"}
         </div>
       </div>
     </div>

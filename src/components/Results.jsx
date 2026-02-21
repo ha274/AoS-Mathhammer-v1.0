@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { C } from '../styles';
 import { parseDice } from '../engine/combat';
 import StatBadge from './ui/StatBadge';
@@ -74,6 +75,11 @@ export default function Results({ firstR, secondR, firstShoot, secondShoot, comb
   const hasAfterExtras = fAfterExtras > 0 || sAfterExtras > 0;
   const hasDuringExtras = fOnXDuring > 0 || sOnXDuring > 0;
   const hasFT = fFTDmg > 0 || sFTDmg > 0;
+
+  // Collapsible sections (all collapsed by default)
+  const [showAttackDetail, setShowAttackDetail] = useState(false);
+  const [showTotalDetail, setShowTotalDetail] = useState(false);
+  const [showEffDetail, setShowEffDetail] = useState(false);
 
   const modeDesc = combatMode === "shoot" ? "Shooting Phase"
     : combatMode === "shootCharge" ? "Shoot + Charge + Melee + Fight Back"
@@ -207,114 +213,276 @@ export default function Results({ firstR, secondR, firstShoot, secondShoot, comb
       {onToggleFirst && <span style={{ fontSize: 9, marginLeft: 6, color: C.dGold, opacity: 0.6 }}>(click to swap)</span>}
     </div>}
 
-    {/* PRE-COMBAT MORTALS */}
-    {hasPreCombat && <div style={{
-      background: "rgba(232,104,104,0.08)", border: "1px solid rgba(232,104,104,0.2)", borderRadius: 6, padding: 12, marginBottom: 12
-    }}>
-      <div style={{ fontSize: 10, color: "#e86868", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6, fontFamily: "'Cinzel', serif" }}>Pre-Combat Mortal Wounds</div>
-      {fPreCombatDmg > 0 && <div style={{ marginBottom: 4 }}>
-        <div style={{ fontSize: 11, color: C.gold, fontWeight: 600, marginBottom: 2 }}>{firstUnit.name} &rarr; {secondUnit.name}</div>
-        <MortalLine label={`${firstAtkMods.onXDamage || "D3"} on ${firstAtkMods.onXThreshold}`} value={fPreCombatDmg} />
-        {fPreCombatKills > 0 && <div style={{ fontSize: 10, color: "#e86868", padding: "2px 8px", fontStyle: "italic" }}>
-          {fPreCombatKills} model{fPreCombatKills !== 1 ? "s" : ""} slain before combat begins
+    {/* ATTACK SEQUENCE — collapsible */}
+    <div style={{ marginBottom: 12 }}>
+      <button onClick={() => setShowAttackDetail(!showAttackDetail)} style={{
+        background: showAttackDetail ? "rgba(201,168,76,0.08)" : "rgba(201,168,76,0.04)",
+        border: `1px solid ${showAttackDetail ? "rgba(201,168,76,0.25)" : "rgba(201,168,76,0.12)"}`,
+        color: C.gold, borderRadius: 6, cursor: "pointer", fontSize: 13, padding: "8px 12px",
+        fontFamily: "'Cinzel', serif", letterSpacing: 1.5, textTransform: "uppercase",
+        width: "100%", textAlign: "center", transition: "all 0.15s"
+      }}>
+        <span style={{ fontSize: 18, lineHeight: 1, verticalAlign: "middle", marginRight: 6 }}>{showAttackDetail ? "\u25BE" : "\u25B8"}</span>
+        Attack Sequence
+      </button>
+
+      {!showAttackDetail && <div style={{
+        background: "rgba(201,168,76,0.04)", border: "1px solid rgba(201,168,76,0.10)",
+        borderTop: "none", borderRadius: "0 0 6px 6px", padding: "10px 14px"
+      }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 10, color: C.fGold, marginBottom: 2 }}>{firstUnit.name}</div>
+            <div style={{ fontSize: 20, fontFamily: "'Cinzel', serif", fontWeight: 700, color: C.gold }}>
+              {fDmg.toFixed(1)} <span style={{ fontSize: 10, fontWeight: 400, color: C.dGold }}>dmg</span>
+            </div>
+            <div style={{ fontSize: 10, color: C.lRed }}>{fK} kill{fK !== 1 ? "s" : ""}</div>
+          </div>
+          <div style={{ textAlign: "center", padding: "0 4px" }}>
+            <div style={{ fontSize: 10, color: C.fGold }}>
+              {surv > 0 ? <>{surv} fight{surv === 1 ? "s" : ""} back</> : <span style={{ color: C.green }}>WIPED</span>}
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, color: C.fGold, marginBottom: 2 }}>{secondUnit.name}</div>
+            <div style={{ fontSize: 20, fontFamily: "'Cinzel', serif", fontWeight: 700, color: C.red }}>
+              {sDmg.toFixed(1)} <span style={{ fontSize: 10, fontWeight: 400, color: C.dGold }}>dmg</span>
+            </div>
+            <div style={{ fontSize: 10, color: C.lRed }}>{sK} kill{sK !== 1 ? "s" : ""}</div>
+          </div>
+        </div>
+      </div>}
+
+      {showAttackDetail && <div style={{ marginTop: 8 }}>
+        {/* PRE-COMBAT MORTALS */}
+        {hasPreCombat && <div style={{
+          background: "rgba(232,104,104,0.08)", border: "1px solid rgba(232,104,104,0.2)", borderRadius: 6, padding: 12, marginBottom: 12
+        }}>
+          <div style={{ fontSize: 10, color: "#e86868", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6, fontFamily: "'Cinzel', serif" }}>Pre-Combat Mortal Wounds</div>
+          {fPreCombatDmg > 0 && <div style={{ marginBottom: 4 }}>
+            <div style={{ fontSize: 11, color: C.gold, fontWeight: 600, marginBottom: 2 }}>{firstUnit.name} &rarr; {secondUnit.name}</div>
+            <MortalLine label={`${firstAtkMods.onXDamage || "D3"} on ${firstAtkMods.onXThreshold}`} value={fPreCombatDmg} />
+            {fPreCombatKills > 0 && <div style={{ fontSize: 10, color: "#e86868", padding: "2px 8px", fontStyle: "italic" }}>
+              {fPreCombatKills} model{fPreCombatKills !== 1 ? "s" : ""} slain before combat begins
+            </div>}
+          </div>}
+          {sPreCombatDmg > 0 && <div style={{ marginBottom: 4 }}>
+            <div style={{ fontSize: 11, color: C.red, fontWeight: 600, marginBottom: 2 }}>{secondUnit.name} &rarr; {firstUnit.name}</div>
+            <MortalLine label={`${secondAtkMods.onXDamage || "D3"} on ${secondAtkMods.onXThreshold}`} value={sPreCombatDmg} />
+            {sPreCombatKills > 0 && <div style={{ fontSize: 10, color: "#e86868", padding: "2px 8px", fontStyle: "italic" }}>
+              {sPreCombatKills} model{sPreCombatKills !== 1 ? "s" : ""} slain before combat begins
+            </div>}
+          </div>}
+        </div>}
+
+        {/* SHOOTING PHASE */}
+        {combatMode !== "melee" && (firstShoot?.weapons.length > 0 || secondShoot?.weapons.length > 0) && <>
+          <div style={{ textAlign: "center", padding: "4px 0 8px" }}>
+            <span style={{ fontFamily: "'Cinzel', serif", fontSize: 12, color: cBlue, letterSpacing: 2, textTransform: "uppercase" }}>Shooting Phase</span>
+            <div style={{ fontSize: 10, color: C.fGold, marginTop: 2 }}>Both units fire simultaneously</div>
+          </div>
+          <PhaseBlock title={`${firstLabel} Shoots`} icon="" color={cBlue} result={firstShoot} />
+          <PhaseBlock title={`${secondLabel} Shoots`} icon="" color="#de6a4a" result={secondShoot} />
+          {combatMode === "shootCharge" && <div style={{ textAlign: "center", padding: "8px 12px", marginBottom: 12, background: "rgba(74,158,222,0.08)", border: "1px solid rgba(74,158,222,0.2)", borderRadius: 6 }}>
+            <span style={{ fontSize: 12, color: cBlue }}>
+              After shooting: {firstLabel} <strong>{firstSurvAfterShoot}</strong>/{firstUnit.modelCount} alive
+              {" | "}{secondLabel} <strong>{secondSurvAfterShoot}</strong>/{secondUnit.modelCount} alive
+              {firstSurvAfterShoot > 0 ? " - Charge!" : ""}
+            </span>
+          </div>}
+        </>}
+
+        {combatMode !== "melee" && !firstShoot?.weapons.length && !secondShoot?.weapons.length && <div style={{
+          textAlign: "center", padding: "16px 12px", marginBottom: 12, background: "rgba(74,158,222,0.05)",
+          border: "1px solid rgba(74,158,222,0.15)", borderRadius: 6, color: C.fGold, fontSize: 12, fontStyle: "italic"
+        }}>Neither unit has ranged weapons enabled</div>}
+
+        {/* MELEE PHASE */}
+        {combatMode !== "shoot" && <>
+          {combatMode === "shootCharge" && <div style={{ textAlign: "center", padding: "4px 0 8px" }}>
+            <span style={{ fontFamily: "'Cinzel', serif", fontSize: 12, color: C.gold, letterSpacing: 2, textTransform: "uppercase" }}>Melee Phase</span>
+          </div>}
+          <PhaseBlock title={`${firstLabel} Strikes`} icon="" color={C.gold} result={firstR}
+            subtitle={combatMode === "shootCharge" && firstSurvAfterShoot < firstUnit.modelCount ? `${firstSurvAfterShoot} models after shooting casualties` : null}
+            extraDmg={fOnXDuring} extraLabel={fOnXDuring > 0 ? `${firstAtkMods.onXDamage || "D3"} on ${firstAtkMods.onXThreshold} mortals (during)` : null} />
+          <div style={{ textAlign: "center", padding: "8px 12px", marginBottom: 12, background: "rgba(139,76,76,0.1)", border: "1px solid rgba(139,76,76,0.2)", borderRadius: 6 }}>
+            <span style={{ fontSize: 12, color: C.lRed }}>
+              {firstR.modelsKilled} model{firstR.modelsKilled !== 1 ? "s" : ""} slain in melee
+              {surv > 0
+                ? <> - <strong style={{ color: "#e8dcc4" }}>{surv}</strong> fight{surv === 1 ? "s" : ""} back</>
+                : <> - <strong style={{ color: C.green }}>UNIT WIPED!</strong></>}
+            </span>
+          </div>
+          <div style={{ opacity: surv === 0 ? 0.35 : 1 }}>
+            <PhaseBlock title={`${surv} Survivor${surv !== 1 ? "s" : ""} Fight Back`} icon="" color={C.red} result={secondR}
+              extraDmg={sOnXDuring} extraLabel={sOnXDuring > 0 ? `${secondAtkMods.onXDamage || "D3"} on ${secondAtkMods.onXThreshold} mortals (during)` : null} />
+          </div>
+
+          {/* FIGHT TWICE — second fights (strike-last) */}
+          {(firstFT || secondFT) && <div style={{ textAlign: "center", padding: "4px 0 8px" }}>
+            <span style={{ fontFamily: "'Cinzel', serif", fontSize: 12, color: "#b888dd", letterSpacing: 2, textTransform: "uppercase" }}>Fight Twice (Strike-Last)</span>
+          </div>}
+          {firstFT && <div style={{ opacity: firstSurvForFT === 0 ? 0.35 : 1 }}>
+            <PhaseBlock title={`${firstLabel} Fights Again`} icon="" color="#b888dd" result={firstFT}
+              subtitle={`${firstSurvForFT} model${firstSurvForFT !== 1 ? "s" : ""} after counterattack (STRIKE-LAST)`} />
+          </div>}
+          {secondFT && <div style={{ opacity: secondSurvForFT === 0 ? 0.35 : 1 }}>
+            <PhaseBlock title={`${secondLabel} Fights Again`} icon="" color="#b888dd" result={secondFT}
+              subtitle={`${secondSurvForFT} model${secondSurvForFT !== 1 ? "s" : ""} remaining (STRIKE-LAST)`} />
+          </div>}
+        </>}
+
+        {/* Post-Combat Extra Mortal Wounds */}
+        {hasAfterExtras && <div style={{
+          background: "rgba(208,96,64,0.08)", border: "1px solid rgba(208,96,64,0.2)", borderRadius: 6, padding: 12, marginBottom: 16
+        }}>
+          <div style={{ fontSize: 10, color: "#d06040", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6, fontFamily: "'Cinzel', serif" }}>Post-Combat Extra Mortal Wounds</div>
+          <MortalSection unitName={`${firstUnit.name} \u2192 ${secondUnit.name}`} color={C.gold}
+            onXDmg={fOnXAfter} onXLabel={`${firstAtkMods.onXDamage || "D3"} on ${firstAtkMods.onXThreshold}`}
+            pmDmg={fPMDmg} pmCount={secondUnit.modelCount} pmThreshold={firstAtkMods.perModelThreshold}
+            ptDmg={fPTDmg} reflectDmg={reflectToSecond} timing="after" />
+          <MortalSection unitName={`${secondUnit.name} \u2192 ${firstUnit.name}`} color={C.red}
+            onXDmg={sOnXAfter} onXLabel={`${secondAtkMods.onXDamage || "D3"} on ${secondAtkMods.onXThreshold}`}
+            pmDmg={sPMDmg} pmCount={firstUnit.modelCount} pmThreshold={secondAtkMods.perModelThreshold}
+            ptDmg={sPTDmg} reflectDmg={reflectToFirst} timing="after" />
         </div>}
       </div>}
-      {sPreCombatDmg > 0 && <div style={{ marginBottom: 4 }}>
-        <div style={{ fontSize: 11, color: C.red, fontWeight: 600, marginBottom: 2 }}>{secondUnit.name} &rarr; {firstUnit.name}</div>
-        <MortalLine label={`${secondAtkMods.onXDamage || "D3"} on ${secondAtkMods.onXThreshold}`} value={sPreCombatDmg} />
-        {sPreCombatKills > 0 && <div style={{ fontSize: 10, color: "#e86868", padding: "2px 8px", fontStyle: "italic" }}>
-          {sPreCombatKills} model{sPreCombatKills !== 1 ? "s" : ""} slain before combat begins
-        </div>}
-      </div>}
-    </div>}
-
-    {/* SHOOTING PHASE */}
-    {combatMode !== "melee" && (firstShoot?.weapons.length > 0 || secondShoot?.weapons.length > 0) && <>
-      <div style={{ textAlign: "center", padding: "4px 0 8px" }}>
-        <span style={{ fontFamily: "'Cinzel', serif", fontSize: 12, color: cBlue, letterSpacing: 2, textTransform: "uppercase" }}>Shooting Phase</span>
-        <div style={{ fontSize: 10, color: C.fGold, marginTop: 2 }}>Both units fire simultaneously</div>
-      </div>
-      <PhaseBlock title={`${firstLabel} Shoots`} icon="" color={cBlue} result={firstShoot} />
-      <PhaseBlock title={`${secondLabel} Shoots`} icon="" color="#de6a4a" result={secondShoot} />
-      {combatMode === "shootCharge" && <div style={{ textAlign: "center", padding: "8px 12px", marginBottom: 12, background: "rgba(74,158,222,0.08)", border: "1px solid rgba(74,158,222,0.2)", borderRadius: 6 }}>
-        <span style={{ fontSize: 12, color: cBlue }}>
-          After shooting: {firstLabel} <strong>{firstSurvAfterShoot}</strong>/{firstUnit.modelCount} alive
-          {" | "}{secondLabel} <strong>{secondSurvAfterShoot}</strong>/{secondUnit.modelCount} alive
-          {firstSurvAfterShoot > 0 ? " - Charge!" : ""}
-        </span>
-      </div>}
-    </>}
-
-    {combatMode !== "melee" && !firstShoot?.weapons.length && !secondShoot?.weapons.length && <div style={{
-      textAlign: "center", padding: "16px 12px", marginBottom: 12, background: "rgba(74,158,222,0.05)",
-      border: "1px solid rgba(74,158,222,0.15)", borderRadius: 6, color: C.fGold, fontSize: 12, fontStyle: "italic"
-    }}>Neither unit has ranged weapons enabled</div>}
-
-    {/* MELEE PHASE */}
-    {combatMode !== "shoot" && <>
-      {combatMode === "shootCharge" && <div style={{ textAlign: "center", padding: "4px 0 8px" }}>
-        <span style={{ fontFamily: "'Cinzel', serif", fontSize: 12, color: C.gold, letterSpacing: 2, textTransform: "uppercase" }}>Melee Phase</span>
-      </div>}
-      <PhaseBlock title={`${firstLabel} Strikes`} icon="" color={C.gold} result={firstR}
-        subtitle={combatMode === "shootCharge" && firstSurvAfterShoot < firstUnit.modelCount ? `${firstSurvAfterShoot} models after shooting casualties` : null}
-        extraDmg={fOnXDuring} extraLabel={fOnXDuring > 0 ? `${firstAtkMods.onXDamage || "D3"} on ${firstAtkMods.onXThreshold} mortals (during)` : null} />
-      <div style={{ textAlign: "center", padding: "8px 12px", marginBottom: 12, background: "rgba(139,76,76,0.1)", border: "1px solid rgba(139,76,76,0.2)", borderRadius: 6 }}>
-        <span style={{ fontSize: 12, color: C.lRed }}>
-          {firstR.modelsKilled} model{firstR.modelsKilled !== 1 ? "s" : ""} slain in melee
-          {surv > 0
-            ? <> - <strong style={{ color: "#e8dcc4" }}>{surv}</strong> fight{surv === 1 ? "s" : ""} back</>
-            : <> - <strong style={{ color: C.green }}>UNIT WIPED!</strong></>}
-        </span>
-      </div>
-      <div style={{ opacity: surv === 0 ? 0.35 : 1 }}>
-        <PhaseBlock title={`${surv} Survivor${surv !== 1 ? "s" : ""} Fight Back`} icon="" color={C.red} result={secondR}
-          extraDmg={sOnXDuring} extraLabel={sOnXDuring > 0 ? `${secondAtkMods.onXDamage || "D3"} on ${secondAtkMods.onXThreshold} mortals (during)` : null} />
-      </div>
-
-      {/* FIGHT TWICE — second fights (strike-last) */}
-      {(firstFT || secondFT) && <div style={{ textAlign: "center", padding: "4px 0 8px" }}>
-        <span style={{ fontFamily: "'Cinzel', serif", fontSize: 12, color: "#b888dd", letterSpacing: 2, textTransform: "uppercase" }}>Fight Twice (Strike-Last)</span>
-      </div>}
-      {firstFT && <div style={{ opacity: firstSurvForFT === 0 ? 0.35 : 1 }}>
-        <PhaseBlock title={`${firstLabel} Fights Again`} icon="" color="#b888dd" result={firstFT}
-          subtitle={`${firstSurvForFT} model${firstSurvForFT !== 1 ? "s" : ""} after counterattack (STRIKE-LAST)`} />
-      </div>}
-      {secondFT && <div style={{ opacity: secondSurvForFT === 0 ? 0.35 : 1 }}>
-        <PhaseBlock title={`${secondLabel} Fights Again`} icon="" color="#b888dd" result={secondFT}
-          subtitle={`${secondSurvForFT} model${secondSurvForFT !== 1 ? "s" : ""} remaining (STRIKE-LAST)`} />
-      </div>}
-    </>}
-
-    {/* Post-Combat Extra Mortal Wounds */}
-    {hasAfterExtras && <div style={{
-      background: "rgba(208,96,64,0.08)", border: "1px solid rgba(208,96,64,0.2)", borderRadius: 6, padding: 12, marginBottom: 16
-    }}>
-      <div style={{ fontSize: 10, color: "#d06040", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6, fontFamily: "'Cinzel', serif" }}>Post-Combat Extra Mortal Wounds</div>
-      <MortalSection unitName={`${firstUnit.name} \u2192 ${secondUnit.name}`} color={C.gold}
-        onXDmg={fOnXAfter} onXLabel={`${firstAtkMods.onXDamage || "D3"} on ${firstAtkMods.onXThreshold}`}
-        pmDmg={fPMDmg} pmCount={secondUnit.modelCount} pmThreshold={firstAtkMods.perModelThreshold}
-        ptDmg={fPTDmg} reflectDmg={reflectToSecond} timing="after" />
-      <MortalSection unitName={`${secondUnit.name} \u2192 ${firstUnit.name}`} color={C.red}
-        onXDmg={sOnXAfter} onXLabel={`${secondAtkMods.onXDamage || "D3"} on ${secondAtkMods.onXThreshold}`}
-        pmDmg={sPMDmg} pmCount={firstUnit.modelCount} pmThreshold={secondAtkMods.perModelThreshold}
-        ptDmg={sPTDmg} reflectDmg={reflectToFirst} timing="after" />
-    </div>}
-
-    {/* Grand Total Summary */}
-    <div style={{
-      background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 6, padding: 12, marginBottom: 16
-    }}>
-      <div style={{ fontSize: 10, color: C.gold, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8, fontFamily: "'Cinzel', serif", textAlign: "center" }}>Total Damage Summary</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {dmgCol(lUnit, lD, lCol, "left")}
-        {dmgCol(rUnit, rD, rCol, "right")}
-      </div>
     </div>
 
-    {/* Efficiency */}
+    {/* Total Damage — collapsible */}
+    <div style={{ marginBottom: 12 }}>
+      <button onClick={() => setShowTotalDetail(!showTotalDetail)} style={{
+        background: showTotalDetail ? "rgba(201,168,76,0.08)" : "rgba(201,168,76,0.04)",
+        border: `1px solid ${showTotalDetail ? "rgba(201,168,76,0.25)" : "rgba(201,168,76,0.12)"}`,
+        color: C.gold, borderRadius: 6, cursor: "pointer", fontSize: 13, padding: "8px 12px",
+        fontFamily: "'Cinzel', serif", letterSpacing: 1.5, textTransform: "uppercase",
+        width: "100%", textAlign: "center", transition: "all 0.15s"
+      }}>
+        <span style={{ fontSize: 18, lineHeight: 1, verticalAlign: "middle", marginRight: 6 }}>{showTotalDetail ? "\u25BE" : "\u25B8"}</span>
+        Total Damage
+      </button>
+
+      {/* Collapsed: just totals + kills */}
+      {!showTotalDetail && <div style={{
+        background: "rgba(201,168,76,0.04)", border: "1px solid rgba(201,168,76,0.10)",
+        borderTop: "none", borderRadius: "0 0 6px 6px", padding: "10px 14px"
+      }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 10, color: C.fGold, marginBottom: 2 }}>{lUnit.name}</div>
+            <div style={{ fontSize: 22, fontFamily: "'Cinzel', serif", fontWeight: 700, color: lCol }}>
+              {lD.total.toFixed(1)} <span style={{ fontSize: 10, fontWeight: 400, color: C.dGold }}>dmg</span>
+            </div>
+            <div style={{ fontSize: 11, color: C.lRed, fontWeight: 600 }}>{lD.kills} kill{lD.kills !== 1 ? "s" : ""}</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, color: C.fGold, marginBottom: 2 }}>{rUnit.name}</div>
+            <div style={{ fontSize: 22, fontFamily: "'Cinzel', serif", fontWeight: 700, color: rCol }}>
+              {rD.total.toFixed(1)} <span style={{ fontSize: 10, fontWeight: 400, color: C.dGold }}>dmg</span>
+            </div>
+            <div style={{ fontSize: 11, color: C.lRed, fontWeight: 600 }}>{rD.kills} kill{rD.kills !== 1 ? "s" : ""}</div>
+          </div>
+        </div>
+      </div>}
+
+      {/* Expanded: source breakdown + per-weapon */}
+      {showTotalDetail && <div style={{
+        background: "rgba(201,168,76,0.04)", border: "1px solid rgba(201,168,76,0.10)",
+        borderTop: "none", borderRadius: "0 0 6px 6px", padding: "12px 14px", marginTop: 0
+      }}>
+        {/* Source breakdown */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 12 }}>
+          {dmgCol(lUnit, lD, lCol, "left")}
+          {dmgCol(rUnit, rD, rCol, "right")}
+        </div>
+
+        {/* Per-weapon breakdown */}
+        {(() => {
+          const lWeapons = [];
+          const rWeapons = [];
+          const lResults = aFirst
+            ? [firstShoot, firstR, firstFT]
+            : [secondShoot, secondR, secondFT];
+          const rResults = aFirst
+            ? [secondShoot, secondR, secondFT]
+            : [firstShoot, firstR, firstFT];
+          const lPhases = ["Shooting", "Melee", "Fight Twice"];
+          lResults.forEach((r, i) => { if (r?.weapons) r.weapons.forEach(w => lWeapons.push({ ...w, phase: lPhases[i] })); });
+          rResults.forEach((r, i) => { if (r?.weapons) r.weapons.forEach(w => rWeapons.push({ ...w, phase: lPhases[i] })); });
+          if (lWeapons.length === 0 && rWeapons.length === 0) return null;
+          const wpnList = (weapons, col, align) => <div>
+            {weapons.map((w, i) => {
+              const R = align === "right";
+              return <div key={i} style={{ padding: "3px 0", borderBottom: `1px solid ${col}10` }}>
+                <div style={{ display: "flex", justifyContent: R ? "flex-end" : "flex-start", fontSize: 11, gap: 6 }}>
+                  {R ? <>
+                    <span style={{ color: col, fontWeight: 700 }}>{w.avgDamage.toFixed(2)}</span>
+                    <span style={{ color: C.dGold, fontWeight: 600 }}>{w.name}</span>
+                  </> : <>
+                    <span style={{ color: C.dGold, fontWeight: 600 }}>{w.name}</span>
+                    <span style={{ color: col, fontWeight: 700 }}>{w.avgDamage.toFixed(2)}</span>
+                  </>}
+                </div>
+                <div style={{ fontSize: 9, color: C.fGold, textAlign: align }}>
+                  {w.phase}{w.isComp ? " · Companion" : ""} · {w.attacks.toFixed(1)} atk · Dmg {w.dmg.toFixed(1)}
+                </div>
+              </div>;
+            })}
+          </div>;
+          return <>
+            <div style={{ borderTop: `1px solid rgba(201,168,76,0.12)`, paddingTop: 10, marginTop: 4 }}>
+              <div style={{ fontSize: 10, color: C.gold, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6, fontFamily: "'Cinzel', serif", textAlign: "center" }}>Weapon Breakdown</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                {lWeapons.length > 0 ? wpnList(lWeapons, lCol, "left") : <div style={{ fontSize: 10, color: C.fGold, fontStyle: "italic" }}>No weapons</div>}
+                {rWeapons.length > 0 ? wpnList(rWeapons, rCol, "right") : <div style={{ fontSize: 10, color: C.fGold, fontStyle: "italic", textAlign: "right" }}>No weapons</div>}
+              </div>
+            </div>
+          </>;
+        })()}
+      </div>}
+    </div>
+
+    {/* Efficiency — collapsible */}
     <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(201,168,76,0.15)", borderRadius: 6, padding: 12 }}>
-      <div style={{ fontSize: 11, color: C.gold, letterSpacing: 1.5, marginBottom: 10, textTransform: "uppercase", textAlign: "center", fontFamily: "'Cinzel', serif" }}>Points Efficiency</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 12, alignItems: "start" }}>
+      <button onClick={() => setShowEffDetail(!showEffDetail)} style={{
+        background: showEffDetail ? "rgba(201,168,76,0.08)" : "rgba(201,168,76,0.04)",
+        border: `1px solid ${showEffDetail ? "rgba(201,168,76,0.25)" : "rgba(201,168,76,0.12)"}`,
+        color: C.gold, borderRadius: 6, cursor: "pointer", fontSize: 13, padding: "8px 12px",
+        fontFamily: "'Cinzel', serif", letterSpacing: 1.5, textTransform: "uppercase",
+        width: "100%", textAlign: "center", transition: "all 0.15s",
+        marginBottom: showEffDetail ? 10 : 0
+      }}>
+        <span style={{ fontSize: 18, lineHeight: 1, verticalAlign: "middle", marginRight: 6 }}>{showEffDetail ? "\u25BE" : "\u25B8"}</span>
+        Points Efficiency
+      </button>
+
+      {!showEffDetail && <div style={{
+        display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center",
+        marginTop: 8, padding: "4px 0"
+      }}>
+        <div>
+          <div style={{ fontSize: 10, color: C.fGold, marginBottom: 2 }}>{lUnit.name}</div>
+          <div style={{ fontSize: 16, fontFamily: "'Cinzel', serif", fontWeight: 700, color: lCol }}>
+            {lD.d100.toFixed(1)} <span style={{ fontSize: 9, fontWeight: 400, color: C.dGold }}>dmg / 100pts</span>
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 9, color: C.fGold, letterSpacing: 1, marginBottom: 2 }}>VERDICT</div>
+          {winner === "draw"
+            ? <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, color: C.dGold }}>DRAW</div>
+            : <div style={{ fontFamily: "'Cinzel', serif", fontSize: 12, color: winner === "first" ? C.gold : C.red }}>
+                {winner === "first" ? firstUnit.name : secondUnit.name} +{Math.abs(net).toFixed(0)}
+              </div>}
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 10, color: C.fGold, marginBottom: 2 }}>{rUnit.name}</div>
+          <div style={{ fontSize: 16, fontFamily: "'Cinzel', serif", fontWeight: 700, color: rCol }}>
+            {rD.d100.toFixed(1)} <span style={{ fontSize: 9, fontWeight: 400, color: C.dGold }}>dmg / 100pts</span>
+          </div>
+        </div>
+      </div>}
+
+      {showEffDetail && <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 12, alignItems: "start" }}>
         {eff(lUnit.name, lD.d100, lD.ppk, lD.pd, lD.roi, lCol, "left")}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", alignSelf: "center", padding: "0 10px", borderLeft: "1px solid rgba(201,168,76,0.08)", borderRight: "1px solid rgba(201,168,76,0.08)", minHeight: 70 }}>
           <div style={{ fontSize: 9, color: C.fGold, letterSpacing: 1, marginBottom: 4 }}>VERDICT</div>
@@ -331,7 +499,7 @@ export default function Results({ firstR, secondR, firstShoot, secondShoot, comb
             </>}
         </div>
         {eff(rUnit.name, rD.d100, rD.ppk, rD.pd, rD.roi, rCol, "right")}
-      </div>
+      </div>}
     </div>
   </div>;
 }

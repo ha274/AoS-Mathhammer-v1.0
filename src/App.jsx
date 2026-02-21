@@ -8,12 +8,13 @@ import UnitPanel from './components/UnitPanel';
 import Results from './components/Results';
 import SimResults from './components/SimResults';
 import TrainingGrounds from './components/TrainingGrounds';
+import GuidePanel from './components/GuidePanel';
 
 const defaultUnit = () => JSON.parse(JSON.stringify(PRESETS[0]));
 
 export default function App() {
   // Page navigation
-  const [page, setPage] = useState("combat"); // "combat" | "training"
+  const [page, setPage] = useState("combat"); // "combat" | "training" | "guide"
 
   const [unitA, setUnitA] = useState(defaultUnit());
   const [unitB, setUnitB] = useState(() => JSON.parse(JSON.stringify(PRESETS[2])));
@@ -262,6 +263,7 @@ export default function App() {
       <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 12 }}>
         {navBtn("combat", "Combat Sim")}
         {navBtn("training", "Training Grounds")}
+        {navBtn("guide", "Guide")}
       </div>
     </div>
 
@@ -370,6 +372,8 @@ export default function App() {
         showLegacy={showLegacy}
         customPresets={customPresets}
       />}
+
+      {page === "guide" && <GuidePanel />}
 
       <div style={{ textAlign: "center", padding: "20px 0 12px", fontSize: 10, color: "#554f43", letterSpacing: 1 }}>
         <div>AOS MATHHAMMER v0.17 — Training Grounds — AoS 4th Edition</div>
